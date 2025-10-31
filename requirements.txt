@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pytesseract
+pdf2image
+Pillow
+requests
+streamlit
+pymupdf
+opencv-python
