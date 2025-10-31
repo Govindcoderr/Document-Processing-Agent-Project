@@ -14,8 +14,7 @@ An **AI-powered invoice automation system** that extracts data from **PDFs and i
 ✅ Modular backend with clear folder structure  
 
 ---
-
-## 🧩 Folder Structure
+ 🧩 Folder Structure
 
 document_processing_agent/
 │
