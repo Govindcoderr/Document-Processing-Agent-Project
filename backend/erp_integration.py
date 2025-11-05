@@ -1,143 +1,86 @@
-# # backend/erp_integration.py
-# import os
-# import requests
-# from typing import Tuple
-
-# ERP_API_URL = os.getenv("ERP_API_URL", "https://example-erp-system.com/api/invoices")
-# ERP_API_KEY = os.getenv("ERP_API_KEY")  # optional
-
-# def push_to_erp(data: dict) -> dict:
-#     headers = {"Content-Type": "application/json"}
-#     if ERP_API_KEY:
-#         headers["Authorization"] = f"Bearer {ERP_API_KEY}"
-#     resp = requests.post(ERP_API_URL, json=data, headers=headers, timeout=10)
-#     try:
-#         resp.raise_for_status()
-#         return {"status": "success", "code": resp.status_code, "body": resp.json() if resp.content else {}}
-#     except requests.HTTPError as e:
-#         return {"status": "error", "code": resp.status_code, "text": resp.text}
-
-
-
-
-
-
-
-
-
-# # backend/erp_integration.py
-# import os
-# import xmlrpc.client
-# from dotenv import load_dotenv
-
-# # Load environment variables from .env
-# load_dotenv()
-
-# def push_to_erp(data: dict) -> dict:
-#     """
-#     Push validated invoice data to Odoo ERP via XML-RPC API.
-#     """
-
-#     # Step 1. Credentials from .env file
-#     url = os.getenv("ODOO_URL", "https://vavefx.odoo.com/odoo")
-#     db = os.getenv("ODOO_DB", "vavefx")  # your Odoo database name
-#     username = os.getenv("ODOO_USERNAME" ,"govindsinghmitcs@gmail.com")
-#     password = os.getenv("ODOO_PASSWORD", "Govind@9664")
-
-#     # Step 2. Authenticate user
-#     common = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/common")
-#     uid = common.authenticate(db, username, password, {})
-
-#     if not uid:
-#         return {"status": "error", "message": "Odoo Authentication failed. Check credentials."}
-
-#     # Step 3. Create an Object proxy to perform actions
-#     models = xmlrpc.client.ServerProxy(f"{url}/xmlrpc/2/object")
-
-#     # Step 4. Prepare invoice data
-#     invoice_data = {
-#         "move_type": "in_invoice",  # 'out_invoice' for customer invoices
-#         "partner_id": 1,  # replace with correct vendor/customer ID
-#         "invoice_date": data.get("invoice_date"),
-#         "invoice_line_ids": [
-#             (0, 0, {
-#                 "name": f"Invoice {data.get('invoice_number')}",
-#                 "quantity": 1,
-#                 "price_unit": data.get("total", 0.0),
-#             })
-#         ]
-#     }
-
-#     # Step 5. Create invoice record in Odoo
-#     try:
-#         invoice_id = models.execute_kw(
-#             db, uid, password,
-#             "account.move", "create",
-#             [invoice_data]
-#         )
-#         return {"status": "success", "invoice_id": invoice_id}
-#     except Exception as e:
-#         return {"status": "error", "message": str(e)}
-
-
-
-
 # backend/erp_integration.py
 import os
 import requests
 from dotenv import load_dotenv
+from backend.zoho_auth import get_zoho_access_token
 
+# Load environment variables
 load_dotenv()
 
 def push_to_erp(data: dict) -> dict:
     """
-    Push validated invoice data to ERPNext via REST API.
+    Push validated invoice data to Zoho Books via REST API.
+    Automatically refreshes access token and retries if one endpoint fails.
     """
 
-    ERP_URL = os.getenv("ERP_URL")
-    ERP_API_KEY = os.getenv("ERP_API_KEY")
-    ERP_API_SECRET = os.getenv("ERP_API_SECRET")
+    ZOHO_ORG_ID = os.getenv("ZOHO_ORG_ID", "60057165181")
 
-    if not all([ERP_URL, ERP_API_KEY, ERP_API_SECRET]):
-        return {"status": "error", "message": "ERPNext credentials missing"}
+    # 🔐 Get Zoho OAuth token dynamically
+    token = get_zoho_access_token()
+    if not token:
+        return {"status": "error", "message": "Zoho OAuth token fetch failed."}
 
-    headers = {
-        "Authorization": f"token {ERP_API_KEY}:{ERP_API_SECRET}",
-        "Content-Type": "application/json"
-    }
+    # 🌍 API Endpoints
+    primary_url = "https://books.zohoapis.in/api/v3/invoices" 
+    backup_url = "https://books.zoho.in/api/v3/invoices"
 
-    # Build minimal Sales Invoice payload
-    invoice_data = {
-        "doctype": "Sales Invoice",
-        "customer": data.get("vendor_name", "Walk-In Customer"),
-        "posting_date": data.get("invoice_date"),
-        "items": [
+    # 📦 Build invoice payload
+    payload = {
+        "customer_name": data.get("vendor_name", "Walk-In Customer"),
+        "reference_number": data.get("invoice_number", "N/A"),
+        "date": data.get("invoice_date"),
+        "line_items": [
             {
-                "item_name": f"Invoice {data.get('invoice_number', '')}",
-                "qty": 1,
-                "rate": float(data.get("total", 0.0)),
+                "description": f"Auto-generated invoice for {data.get('vendor_name', 'Unknown')}",
+                "name": f"Invoice {data.get('invoice_number', 'N/A')}",
+                "quantity": 1,
+                "rate": float(data.get("total", 0.0))
             }
         ]
     }
 
+    headers = {
+        "Authorization": f"Zoho-oauthtoken {token}",
+        "X-com-zoho-books-organizationid": ZOHO_ORG_ID,
+        "Content-Type": "application/json"
+    }
+
+    # 🚀 Try primary domain
     try:
-        response = requests.post(
-            f"{ERP_URL}/api/resource/Sales%20Invoice",
-            json=invoice_data,
-            headers=headers,
-            timeout=10
-        )
-        if response.status_code in (200, 201):
+        resp = requests.post(primary_url, json=payload, headers=headers, timeout=30)
+        resp.raise_for_status()
+
+        result = resp.json()
+        return {
+            "status": "success",
+            "invoice_id": result.get("invoice", {}).get("invoice_id"),
+            "invoice_number": result.get("invoice", {}).get("invoice_number"),
+            "invoice_url": result.get("invoice", {}).get("invoice_url"),
+            "message": f"✅ Invoice pushed successfully to Zoho Books ({primary_url})"
+        }
+
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Primary domain failed: {e}")
+        print("🔁 Retrying with alternate domain...")
+
+        try:
+            resp = requests.post(backup_url, json=payload, headers=headers, timeout=30)
+            resp.raise_for_status()
+
+            result = resp.json()
             return {
                 "status": "success",
-                "erp_id": response.json().get("data", {}).get("name"),
-                "message": "Invoice pushed to ERPNext"
+                "invoice_id": result.get("invoice", {}).get("invoice_id"),
+                "invoice_number": result.get("invoice", {}).get("invoice_number"),
+                "invoice_url": result.get("invoice", {}).get("invoice_url"),
+                "message": f"✅ Invoice pushed successfully to Zoho Books ({backup_url})"
             }
-        else:
+
+        except requests.exceptions.RequestException as e2:
             return {
                 "status": "error",
-                "code": response.status_code,
-                "body": response.text
+                "message": f"❌ Both Zoho API endpoints failed. Error: {e2}"
             }
+
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"Unexpected error: {e}"}
