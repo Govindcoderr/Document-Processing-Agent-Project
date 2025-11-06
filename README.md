@@ -119,12 +119,20 @@ This project is licensed under the MIT License.
 
 ---
 
-Would you like me to:
-- **Add badges** (like Python version, FastAPI, MIT License)  
-- or **generate a version for Streamlit Cloud deployment (with setup steps)**?
+
+----
 <img width="2870" height="1439" alt="Screenshot 2025-11-06 124804" src="https://github.com/user-attachments/assets/ed805bd7-b11e-4208-95e7-0784f473110c" />
+
+-----
 <img width="2869" height="1449" alt="Screenshot 2025-11-06 124828" src="https://github.com/user-attachments/assets/764f4612-ded2-4e9d-894c-efa1ea5a9848" />
+
+----
 <img width="2880" height="1620" alt="Screenshot 2025-11-06 124726" src="https://github.com/user-attachments/assets/481f59c2-9920-4f43-bbcb-97b05d3dec23" />
+----
 <img width="789" height="672" alt="Screenshot 2025-11-06 151108" src="https://github.com/user-attachments/assets/a40f4193-d503-4fea-a43e-b60d6ad689d0" />
+
+----
 <img width="2869" height="1461" alt="Screenshot 2025-11-06 182336" src="https://github.com/user-attachments/assets/691cb474-5f11-45f9-8b69-834de7e4e66c" />
+---
 <img width="2880" height="1620" alt="Screenshot 2025-11-06 182411" src="https://github.com/user-attachments/assets/a040d812-aad8-4102-8591-ee434645f1ed" />
+----
