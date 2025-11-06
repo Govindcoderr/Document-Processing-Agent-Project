@@ -119,11 +119,11 @@ def extract_fields(text: str) -> dict:
         cleaned_output = re.sub(r"```(json)?", "", ai_output).strip("` \n")
 
         data = json.loads(cleaned_output)
-        print("✅ Extracted with LLM:", data)
+        print(" Extracted with LLM:", data)
         return data
 
     except Exception as e:
-        print(f"❌ LLM extraction failed: {e}")
+        print(f" LLM extraction failed: {e}")
         return {
 
             "customer_name": None,
