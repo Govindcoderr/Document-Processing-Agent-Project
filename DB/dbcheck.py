@@ -1,17 +1,26 @@
-import sqlite3 
+# dbcheck.py
+import sqlite3
+import os
 
-# connect to the datacabse 
-conn  = sqlite3.connect('invoices.db')
-cursor  =conn.cursor()
+DB_PATH = os.path.abspath("invoices.db")
+print(f" Database Path: {DB_PATH}")
 
-# check if the invoices table exists
-cursor.execute("""
-    SELECT name FROM sqlite_master WHERE type='table';
-""")
-print(cursor.fetchall())
+conn = sqlite3.connect(DB_PATH)
+cursor = conn.cursor()
 
-#read data from one table
+print("\n Tables:")
+cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+tables = cursor.fetchall()
+for t in tables:
+    print(" -", t[0])
+
+print("\n All Invoices:")
 cursor.execute("SELECT * FROM invoices;")
-for row in cursor.fetchall():
-    print(row)
+rows = cursor.fetchall()
+if not rows:
+    print(" No data found in invoices table.")
+else:
+    for row in rows:
+        print(row)
 
+conn.close()
